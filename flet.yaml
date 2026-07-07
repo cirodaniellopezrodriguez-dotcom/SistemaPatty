@@ -1,0 +1,5 @@
+app:
+  name: Sistema Patty
+  version: 1.0.0
+  product_name: SistemaPatty
+  org: com.patty.sistema
