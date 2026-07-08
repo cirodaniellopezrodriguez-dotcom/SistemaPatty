@@ -4,7 +4,7 @@ from datetime import datetime
 def main(page: ft.Page):
     page.title = "Sistema PATTY - Corte de Caja"
     page.theme_mode = "dark"
-    page.scroll = "adaptive" # Esto permite que si el contenido es largo, puedas hacer scroll y no se pierda nada
+    page.scroll = "adaptive" 
     
     precios = {'Concha': 14.0, 'Concha nuez': 17.0, 'Frances lagunero': 10.0, 'Galleta chispas choc': 10.0}
     
@@ -12,18 +12,60 @@ def main(page: ft.Page):
     dinero_total = {producto: 0.0 for producto in precios}
     suma_total_dinero = 0.0
     carrito = []
+    # NUEVO: Contador de ventas para el récord
+    contador_ventas = 0
+    
+    # Variable para saber qué producto está seleccionado
+    pan_activo = {"nombre": None}
 
-    # UI
-    dropdown = ft.Dropdown(label="Selecciona Pan", options=[ft.dropdown.Option(k) for k in precios.keys()])
-    cantidad = ft.TextField(label="Cantidad", keyboard_type="number")
     lista_visual = ft.ListView(height=100)
     resultado_total = ft.Text(value="Total a pagar: $0.00", size=20, weight="bold")
     resultado_cambio = ft.Text(value="Cambio: $0.00", size=20, weight="bold", color="green")
     pago_recibido = ft.TextField(label="Efectivo Recibido ($)", keyboard_type="number")
+    cantidad = ft.TextField(label="Cantidad", keyboard_type="number")
     
     lista_record = ft.ListView(height=150)
+    # NUEVO: Etiqueta para el récord de ventas
+    contador_ventas_visual = ft.Text(value="Ventas realizadas hoy: 0", size=16, color="gray")
     total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=22, weight="bold", color="yellow")
 
+    # Lista de botones para poder cambiarles el color
+    botones_lista = []
+
+    def seleccionar_boton(e):
+        # 1. Resetear todos los botones a color original (azul por defecto)
+        for b in botones_lista:
+            b.bgcolor = None 
+        
+        # 2. Resaltar el botón presionado en verde
+        e.control.bgcolor = "green"
+        pan_activo["nombre"] = e.control.content.value
+        page.update()
+
+    def agregar_click(e):
+        pan = pan_activo["nombre"]
+        cant_str = cantidad.value
+        if pan and cant_str.isdigit():
+            cant = int(cant_str)
+            carrito.append({'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant})
+            lista_visual.controls.append(ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}"))
+            total_final = sum(item['subtotal'] for item in carrito)
+            resultado_total.value = f"Total a pagar: ${total_final:.2f}"
+            
+            # Limpiar selección después de agregar
+            cantidad.value = ""
+            pan_activo["nombre"] = None
+            for b in botones_lista: b.bgcolor = None
+            page.update()
+
+    # Crear botones y guardarlos en botones_lista
+    for nombre in precios.keys():
+        btn = ft.ElevatedButton(content=ft.Text(nombre), on_click=seleccionar_boton)
+        botones_lista.append(btn)
+
+    botones_row = ft.Row(wrap=True, alignment=ft.MainAxisAlignment.CENTER, controls=botones_lista)
+
+    # --- Funciones de lógica (Corte y Venta) ---
     def calcular_cambio(e):
         total_final = sum(item['subtotal'] for item in carrito)
         try:
@@ -37,46 +79,11 @@ def main(page: ft.Page):
 
     pago_recibido.on_change = calcular_cambio
 
-    def agregar_click(e):
-        pan = dropdown.value
-        cant = int(cantidad.value) if cantidad.value.isdigit() else 0
-        if pan in precios and cant > 0:
-            carrito.append({'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant})
-            lista_visual.controls.append(ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}"))
-            total_final = sum(item['subtotal'] for item in carrito)
-            resultado_total.value = f"Total a pagar: ${total_final:.2f}"
-            cantidad.value = ""
-            page.update()
-
-    def realizar_corte_click(e):
-        nonlocal suma_total_dinero
-        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # 1. Guardar archivo
-        with open("corte_caja_patty.txt", "a") as f:
-            f.write(f"\n--- CORTE DE CAJA: {fecha_actual} ---\n")
-            for pan in precios:
-                if ventas_totales[pan] > 0:
-                    f.write(f"{pan}: {ventas_totales[pan]} pzas - ${dinero_total[pan]:.2f}\n")
-            f.write(f"TOTAL RECAUDADO: ${suma_total_dinero:.2f}\n")
-            f.write("-" * 30 + "\n")
-            
-        # 2. REINICIO DE VARIABLES (El detalle que faltaba)
-        for pan in precios:
-            ventas_totales[pan] = 0
-            dinero_total[pan] = 0.0
-        suma_total_dinero = 0.0
-        
-        # 3. Limpiar pantalla
-        lista_record.controls.clear()
-        total_general_visual.value = "TOTAL VENDIDO HOY: $0.00"
-        
-        page.dialog = ft.AlertDialog(title=ft.Text("Corte realizado con éxito y sistema reiniciado."))
-        page.dialog.open = True
-        page.update()
-
     def confirmar_venta_click(e):
-        nonlocal suma_total_dinero
+        nonlocal suma_total_dinero, contador_ventas
+        # Incrementamos el contador al confirmar venta
+        contador_ventas += 1
+        
         for item in carrito:
             ventas_totales[item['pan']] += item['cant']
             dinero_total[item['pan']] += item['subtotal']
@@ -87,7 +94,10 @@ def main(page: ft.Page):
             if ventas_totales[pan] > 0:
                 lista_record.controls.append(ft.Text(f"{pan}: {ventas_totales[pan]} pzas | ${dinero_total[pan]:.2f}"))
         
+        # Actualizamos etiquetas
+        contador_ventas_visual.value = f"Ventas realizadas hoy: {contador_ventas}"
         total_general_visual.value = f"TOTAL VENDIDO HOY: ${suma_total_dinero:.2f}"
+        
         carrito.clear()
         lista_visual.controls.clear()
         resultado_total.value = "Total: $0.00"
@@ -95,15 +105,31 @@ def main(page: ft.Page):
         pago_recibido.value = ""
         page.update()
 
+    def realizar_corte_click(e):
+        nonlocal suma_total_dinero, contador_ventas
+        suma_total_dinero = 0.0
+        contador_ventas = 0 # Reiniciamos el contador en el corte
+        for pan in precios: ventas_totales[pan] = 0; dinero_total[pan] = 0.0
+        
+        lista_record.controls.clear()
+        contador_ventas_visual.value = "Ventas realizadas hoy: 0"
+        total_general_visual.value = "TOTAL VENDIDO HOY: $0.00"
+        
+        page.dialog = ft.AlertDialog(title=ft.Text("Corte realizado."))
+        page.dialog.open = True
+        page.update()
+
     page.add(
-        ft.Text("Pan Casero PATTY", size=30, weight="bold", color="orange"),
-        dropdown, cantidad,
-        ft.ElevatedButton("AGREGAR", on_click=agregar_click),
+        ft.Text("Pan Casero PATTY", size=25, weight="bold", color="orange"),
+        botones_row,
+        cantidad,
+        ft.ElevatedButton(content=ft.Text("AGREGAR"), on_click=agregar_click, bgcolor="orange"),
         lista_visual, resultado_total,
         pago_recibido, resultado_cambio,
-        ft.ElevatedButton("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor="green"),
-        ft.ElevatedButton("REALIZAR CORTE DE CAJA", on_click=realizar_corte_click, bgcolor="blue"),
+        ft.ElevatedButton(content=ft.Text("CONFIRMAR VENTA"), on_click=confirmar_venta_click, bgcolor="green"),
+        ft.ElevatedButton(content=ft.Text("REALIZAR CORTE"), on_click=realizar_corte_click, bgcolor="blue"),
         ft.Divider(),
+        contador_ventas_visual, # Aquí está tu contador
         total_general_visual,
         lista_record
     )
