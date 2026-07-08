@@ -1,5 +1,11 @@
 import flet as ft
 from datetime import datetime
+import json
+import os
+
+# Archivos de control
+ARCHIVO_DATOS = "datos_patty.json"
+ARCHIVO_SESION = "sesion_activa.json" # Este archivo mantiene la app abierta
 
 def main(page: ft.Page):
     page.title = "Sistema PATTY - Control Total"
@@ -7,7 +13,7 @@ def main(page: ft.Page):
     page.bgcolor = "#E0E0E0"
     page.scroll = "adaptive"
     
-    # --- VARIABLES DE LÓGICA ---
+    # Variables de estado
     inventario = {'Concha': 0, 'Frances lagunero': 0, 'Concha nuez': 0, 'Galleta chispas choc': 0}
     precios = {'Concha': 14.0, 'Frances lagunero': 10.0, 'Concha nuez': 17.0, 'Galleta chispas choc': 10.0}
     ventas_totales_cantidad = {producto: 0 for producto in precios}
@@ -19,22 +25,35 @@ def main(page: ft.Page):
     inputs_inventario = {}
     botones_lista = []
 
-    # --- ELEMENTOS DE UI ---
-    lista_visual = ft.ListView(height=80)
-    lista_record = ft.ListView(height=120)
-    resultado_total = ft.Text(value="Total a pagar: $0.00", size=20, weight="bold", color="black")
-    resultado_cambio = ft.Text(value="Cambio: $0.00", size=20, weight="bold", color="green")
-    pago_recibido = ft.TextField(label="Efectivo Recibido ($)", keyboard_type="number", color="black")
-    cantidad = ft.TextField(label="Cantidad", keyboard_type="number", color="black")
-    ventas_realizadas_visual = ft.Text(value="Ventas realizadas: 0", size=18, weight="bold", color="black")
-    total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=24, weight="bold", color="#D4AF37")
+    # --- FUNCIONES DE CONTROL ---
+    def guardar_datos():
+        datos = {"inventario": inventario, "ventas_cantidad": ventas_totales_cantidad, "ventas_dinero": ventas_totales_dinero, "suma_total": suma_total_dinero, "num_ventas": numero_ventas}
+        with open(ARCHIVO_DATOS, "w") as f: json.dump(datos, f)
 
-    # --- FUNCIONES DE LÓGICA ---
+    def cargar_datos():
+        nonlocal suma_total_dinero, numero_ventas
+        if os.path.exists(ARCHIVO_DATOS):
+            with open(ARCHIVO_DATOS, "r") as f:
+                datos = json.load(f)
+                inventario.update(datos["inventario"])
+                ventas_totales_cantidad.update(datos["ventas_cantidad"])
+                ventas_totales_dinero.update(datos["ventas_dinero"])
+                suma_total_dinero = datos["suma_total"]
+                numero_ventas = datos["num_ventas"]
+
+    def actualizar_lista_record():
+        lista_record.controls.clear()
+        for pan in precios:
+            if ventas_totales_cantidad[pan] > 0:
+                lista_record.controls.append(ft.Text(f"{pan}: {ventas_totales_cantidad[pan]} pzas | ${ventas_totales_dinero[pan]:.2f}", color="black"))
+        page.update()
+
+    # --- LÓGICA DE VENTAS ---
     def actualizar_inventario_desde_inputs(e):
         for pan, input_field in inputs_inventario.items():
             if input_field.value and input_field.value.isdigit():
                 inventario[pan] = int(input_field.value)
-        page.update()
+        guardar_datos()
 
     def seleccionar_boton(e):
         for b in botones_lista: b.bgcolor = "white"
@@ -43,35 +62,54 @@ def main(page: ft.Page):
         page.update()
 
     def agregar_click(e):
+        actualizar_inventario_desde_inputs(None)
         pan = pan_activo["nombre"]
-        if not pan or not cantidad.value.isdigit(): return
-        cant = int(cantidad.value)
-        if inventario[pan] >= cant:
-            carrito.append({'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant})
-            lista_visual.controls.append(ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}", color="black"))
-            total_final = sum(item['subtotal'] for item in carrito)
-            resultado_total.value = f"Total a pagar: ${total_final:.2f}"
-            cantidad.value = ""
-        else:
-            page.dialog = ft.AlertDialog(title=ft.Text(f"¡Solo quedan {inventario[pan]} pzas!"))
-            page.dialog.open = True
-        page.update()
+        if pan and cantidad.value.isdigit():
+            cant = int(cantidad.value)
+            if inventario[pan] >= cant:
+                carrito.append({'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant})
+                lista_visual.controls.append(ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}", color="black"))
+                
+                # RECALCULAMOS EL TOTAL DEL CARRITO
+                total_actual = sum(item['subtotal'] for item in carrito)
+                resultado_total.value = f"Total a pagar: ${total_actual:.2f}"
+                cantidad.value = ""
+            else:
+                page.dialog = ft.AlertDialog(title=ft.Text(f"¡Solo quedan {inventario[pan]} pzas!"))
+                page.dialog.open = True
+            page.update()
 
     def confirmar_venta_click(e):
         nonlocal suma_total_dinero, numero_ventas
-        if not carrito: return
+        
+        # 1. Validación de carrito vacío
+        if not carrito: 
+            return
+
+        # 2. Candado de seguridad: Validar que el pago sea suficiente
+        total_a_pagar = sum(item['subtotal'] for item in carrito)
+        
+        # Si el campo está vacío o el pago es menor al total, bloqueamos la venta
+        if not pago_recibido.value or float(pago_recibido.value) < total_a_pagar:
+            page.dialog = ft.AlertDialog(
+                title=ft.Text("¡Error de pago!"),
+                content=ft.Text(f"Debes ingresar un monto igual o mayor a ${total_a_pagar:.2f}")
+            )
+            page.dialog.open = True
+            page.update()
+            return # Detenemos la función aquí
+
+        # 3. Si todo es correcto, procesamos la venta
         numero_ventas += 1
-        ventas_realizadas_visual.value = f"Ventas realizadas: {numero_ventas}"
         for item in carrito:
             inventario[item['pan']] -= item['cant']
             ventas_totales_cantidad[item['pan']] += item['cant']
             ventas_totales_dinero[item['pan']] += item['subtotal']
             suma_total_dinero += item['subtotal']
             inputs_inventario[item['pan']].value = str(inventario[item['pan']])
-        lista_record.controls.clear()
-        for pan in precios:
-            if ventas_totales_cantidad[pan] > 0:
-                lista_record.controls.append(ft.Text(f"{pan}: {ventas_totales_cantidad[pan]} pzas | ${ventas_totales_dinero[pan]:.2f}", color="black"))
+        
+        # 4. Limpieza de pantalla y preparación para siguiente venta
+        ventas_realizadas_visual.value = f"Ventas realizadas: {numero_ventas}"
         total_general_visual.value = f"TOTAL VENDIDO HOY: ${suma_total_dinero:.2f}"
         carrito.clear()
         lista_visual.controls.clear()
@@ -80,68 +118,95 @@ def main(page: ft.Page):
         pago_recibido.value = ""
         pan_activo["nombre"] = None
         for b in botones_lista: b.bgcolor = "white"
+        
+        actualizar_lista_record()
+        guardar_datos()
         page.update()
 
     def realizar_corte_click(e):
         nonlocal suma_total_dinero, numero_ventas
-        texto_reporte = f"\n--- CORTE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n"
-        for pan in precios:
-            if ventas_totales_cantidad[pan] > 0:
-                texto_reporte += f"{pan}: {ventas_totales_cantidad[pan]} pzas - ${ventas_totales_dinero[pan]:.2f}\n"
-        texto_reporte += f"TOTAL: ${suma_total_dinero:.2f}\n------------------------------\n"
-        with open("corte_caja_patty.txt", "a", encoding="utf-8") as f: f.write(texto_reporte)
+        with open("corte_caja_patty.txt", "a", encoding="utf-8") as f: 
+            f.write(f"\n--- CORTE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\nTOTAL: ${suma_total_dinero:.2f}\n")
         suma_total_dinero, numero_ventas = 0.0, 0
         for pan in precios: ventas_totales_cantidad[pan], ventas_totales_dinero[pan] = 0, 0.0
         ventas_realizadas_visual.value = "Ventas realizadas: 0"
         total_general_visual.value = "TOTAL VENDIDO HOY: $0.00"
-        lista_record.controls.clear()
-        page.dialog = ft.AlertDialog(title=ft.Text("¡Corte guardado!"))
-        page.dialog.open = True
+        actualizar_lista_record()
+        guardar_datos()
         page.update()
 
-    # --- PANTALLA DE CANDADO (INICIO) ---
+    def calcular_cambio(e):
+        total_a_pagar = sum(item['subtotal'] for item in carrito)
+        if pago_recibido.value and pago_recibido.value.replace('.', '', 1).replace(',', '').isdigit():
+            try:
+                pago = float(pago_recibido.value)
+                diferencia = pago - total_a_pagar
+                if diferencia >= 0:
+                    resultado_cambio.value = f"Cambio: ${diferencia:.2f}"
+                    resultado_cambio.color = "green"
+                else:
+                    resultado_cambio.value = f"Faltan: ${abs(diferencia):.2f}"
+                    resultado_cambio.color = "red"
+            except ValueError:
+                resultado_cambio.value = "Cambio: $0.00"
+        else:
+            resultado_cambio.value = "Cambio: $0.00"
+            resultado_cambio.color = "green"
+        page.update()
+
+    # --- UI Y CONTROL ---
+    lista_visual = ft.ListView(height=80)
+    lista_record = ft.ListView(height=120)
+    resultado_total = ft.Text(value="Total a pagar: $0.00", size=20, weight="bold", color="black")
+    resultado_cambio = ft.Text(value="Cambio: $0.00", size=20, weight="bold", color="green")
+    pago_recibido = ft.TextField(label="Efectivo Recibido ($)", keyboard_type="number", color="black", on_change=calcular_cambio)
+    cantidad = ft.TextField(label="Cantidad", keyboard_type="number", color="black")
+    ventas_realizadas_visual = ft.Text(value="Ventas realizadas: 0", size=18, weight="bold", color="black")
+    total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=24, weight="bold", color="#D4AF37")
+
     def verificar_clave(e):
         if campo_clave.value == "PATTY2026":
-            page.controls.clear()
-            cargar_interfaz()
-            page.update()
+            with open(ARCHIVO_SESION, "w") as f: json.dump({"activa": True}, f)
+            iniciar_sistema()
         else:
             campo_clave.error_text = "Clave incorrecta"
             page.update()
 
-    campo_clave = ft.TextField(label="Ingrese Clave de Acceso", password=True, can_reveal_password=True)
-    pantalla_inicio = ft.Column([
-        ft.Text("Bienvenido a Sistema PATTY", size=25, weight="bold"),
-        campo_clave,
-        ft.ElevatedButton("ENTRAR", on_click=verificar_clave, bgcolor="orange")
-    ], alignment=ft.MainAxisAlignment.CENTER)
+    def crear_bloque(nombre):
+        campo_inv = ft.TextField(hint_text="Inv.", width=70, height=40, text_size=12, keyboard_type="number", on_change=actualizar_inventario_desde_inputs)
+        campo_inv.value = str(inventario.get(nombre, 0))
+        inputs_inventario[nombre] = campo_inv
+        btn = ft.ElevatedButton(content=ft.Text(nombre, size=12, color="black"), on_click=seleccionar_boton, bgcolor="white", style=ft.ButtonStyle(padding=5))
+        botones_lista.append(btn)
+        return ft.Column([campo_inv, btn], alignment=ft.MainAxisAlignment.CENTER, spacing=0)
 
-    # --- CARGAR INTERFAZ 2x2 ---
-    def cargar_interfaz():
-        def crear_bloque(nombre):
-            campo_inv = ft.TextField(hint_text="Inv.", width=80, height=40, text_size=12, keyboard_type="number", on_change=actualizar_inventario_desde_inputs)
-            inputs_inventario[nombre] = campo_inv
-            btn = ft.ElevatedButton(content=ft.Text(nombre, size=11, color="black"), on_click=seleccionar_boton, bgcolor="white", width=130)
-            botones_lista.append(btn)
-            return ft.Column([campo_inv, btn], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-
+    def dibujar_interfaz():
         prods = list(precios.keys())
-        fila1 = ft.Row([crear_bloque(prods[0]), crear_bloque(prods[1])], alignment=ft.MainAxisAlignment.CENTER)
-        fila2 = ft.Row([crear_bloque(prods[2]), crear_bloque(prods[3])], alignment=ft.MainAxisAlignment.CENTER)
-
+        page.controls.clear()
         page.add(
-            ft.Container(content=ft.Text("Pan Casero PATTY", size=24, weight="bold", color="orange"), padding=10),
-            fila1, fila2, cantidad,
-            ft.ElevatedButton("AGREGAR AL CARRITO", on_click=agregar_click, bgcolor="orange"),
+            ft.Text("Pan Casero PATTY", size=24, weight="bold", color="orange"),
+            ft.Row([crear_bloque(prods[0]), crear_bloque(prods[1])], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([crear_bloque(prods[2]), crear_bloque(prods[3])], alignment=ft.MainAxisAlignment.CENTER),
+            cantidad, ft.ElevatedButton("AGREGAR AL CARRITO", on_click=agregar_click, bgcolor="orange"),
             lista_visual, resultado_total, pago_recibido, resultado_cambio,
             ft.ElevatedButton("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor="green"),
             ft.ElevatedButton("REALIZAR CORTE", on_click=realizar_corte_click, bgcolor="blue"),
             ft.Divider(), ventas_realizadas_visual, lista_record, total_general_visual
         )
 
-    # Lógica de cambio en tiempo real
-    pago_recibido.on_change = lambda e: (lambda v: (setattr(resultado_cambio, 'value', f"Cambio: ${float(v)-sum(i['subtotal'] for i in carrito):.2f}" if float(v)>=sum(i['subtotal'] for i in carrito) else f"Faltan: ${abs(float(v)-sum(i['subtotal'] for i in carrito)):.2f}"), setattr(resultado_cambio, 'color', "green" if float(v)>=sum(i['subtotal'] for i in carrito) else "red")))(pago_recibido.value) if pago_recibido.value else None
+    def iniciar_sistema():
+        cargar_datos()
+        dibujar_interfaz()
+        actualizar_lista_record()
+        ventas_realizadas_visual.value = f"Ventas realizadas: {numero_ventas}"
+        total_general_visual.value = f"TOTAL VENDIDO HOY: ${suma_total_dinero:.2f}"
+        page.update()
 
-    page.add(pantalla_inicio)
+    # --- INICIO ---
+    if os.path.exists(ARCHIVO_SESION):
+        iniciar_sistema()
+    else:
+        campo_clave = ft.TextField(label="Clave de Acceso", password=True)
+        page.add(ft.Column([ft.Text("ACCESO PATTY", size=20), campo_clave, ft.ElevatedButton("ENTRAR", on_click=verificar_clave)], alignment=ft.MainAxisAlignment.CENTER))
 
 ft.app(target=main)
