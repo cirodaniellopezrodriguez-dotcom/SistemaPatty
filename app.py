@@ -7,8 +7,8 @@ def main(page: ft.Page):
     page.bgcolor = "#E0E0E0"
     page.scroll = "adaptive"
     
-    inventario = {'Concha': 0, 'Concha nuez': 0, 'Frances lagunero': 0, 'Galleta chispas choc': 0}
-    precios = {'Concha': 14.0, 'Concha nuez': 17.0, 'Frances lagunero': 10.0, 'Galleta chispas choc': 10.0}
+    inventario = {'Concha': 0, 'Frances lagunero': 0, 'Concha nuez': 0, 'Galleta chispas choc': 0}
+    precios = {'Concha': 14.0, 'Frances lagunero': 10.0, 'Concha nuez': 17.0, 'Galleta chispas choc': 10.0}
     
     ventas_totales_cantidad = {producto: 0 for producto in precios}
     ventas_totales_dinero = {producto: 0.0 for producto in precios}
