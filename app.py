@@ -1,3 +1,4 @@
+
 import flet as ft
 from datetime import datetime
 import json
@@ -64,19 +65,47 @@ def main(page: ft.Page):
     def agregar_click(e):
         actualizar_inventario_desde_inputs(None)
         pan = pan_activo["nombre"]
+        
         if pan and cantidad.value.isdigit():
             cant = int(cantidad.value)
+            
             if inventario[pan] >= cant:
-                carrito.append({'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant})
-                lista_visual.controls.append(ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}", color="black"))
+                # Creamos el diccionario del producto
+                producto = {'pan': pan, 'cant': cant, 'subtotal': precios[pan] * cant}
+                carrito.append(producto)
                 
-                # RECALCULAMOS EL TOTAL DEL CARRITO
+                # Función para eliminar este item
+                def eliminar_item(e, item=producto):
+                    if item in carrito:
+                        carrito.remove(item)
+                        lista_visual.controls.remove(fila_item)
+                        total_actual = sum(i['subtotal'] for i in carrito)
+                        resultado_total.value = f"Total a pagar: ${total_actual:.2f}"
+                        page.update()
+
+                # Solución final: usamos el botón que tu sistema YA conoce
+                fila_item = ft.Row([
+                    ft.ElevatedButton(
+                        "X", 
+                        on_click=eliminar_item,
+                        bgcolor="red",
+                        color="white"
+                    ),
+                    ft.Text(f"{pan} x{cant} = ${precios[pan]*cant:.2f}", color="black")
+                ])
+                
+                lista_visual.controls.append(fila_item)
+                
+                # Recalculamos el total
                 total_actual = sum(item['subtotal'] for item in carrito)
                 resultado_total.value = f"Total a pagar: ${total_actual:.2f}"
                 cantidad.value = ""
+                
             else:
+                # Si no hay suficiente inventario
                 page.dialog = ft.AlertDialog(title=ft.Text(f"¡Solo quedan {inventario[pan]} pzas!"))
                 page.dialog.open = True
+            
             page.update()
 
     def confirmar_venta_click(e):
@@ -173,10 +202,30 @@ def main(page: ft.Page):
             page.update()
 
     def crear_bloque(nombre):
+        # Mantenemos el campo de inventario
         campo_inv = ft.TextField(hint_text="Inv.", width=70, height=40, text_size=12, keyboard_type="number", on_change=actualizar_inventario_desde_inputs)
         campo_inv.value = str(inventario.get(nombre, 0))
         inputs_inventario[nombre] = campo_inv
-        btn = ft.ElevatedButton(content=ft.Text(nombre, size=12, color="black"), on_click=seleccionar_boton, bgcolor="white", style=ft.ButtonStyle(padding=5))
+        
+        # AQUÍ ESTÁ EL CAMBIO: Fijamos el ancho (width) y alto (height)
+        btn = ft.ElevatedButton(
+            content=ft.Text(
+                nombre, 
+                size=16,            # Aumentamos a 16 para que resalte
+                weight="bold",      # Negritas para mayor legibilidad
+                color="black", 
+                text_align="center"
+            ), 
+            on_click=seleccionar_boton, 
+            bgcolor="white", 
+            style=ft.ButtonStyle(
+                padding=5,
+                shape=ft.RoundedRectangleBorder(radius=8) # Bordes un poquito más suaves
+            ),
+            width=150,  # El ancho que ya definimos
+            height=60   # La altura que ya definimos
+        )
+
         botones_lista.append(btn)
         return ft.Column([campo_inv, btn], alignment=ft.MainAxisAlignment.CENTER, spacing=0)
 
@@ -187,12 +236,20 @@ def main(page: ft.Page):
             ft.Text("Pan Casero PATTY", size=24, weight="bold", color="orange"),
             ft.Row([crear_bloque(prods[0]), crear_bloque(prods[1])], alignment=ft.MainAxisAlignment.CENTER),
             ft.Row([crear_bloque(prods[2]), crear_bloque(prods[3])], alignment=ft.MainAxisAlignment.CENTER),
-            cantidad, ft.ElevatedButton("AGREGAR AL CARRITO", on_click=agregar_click, bgcolor="orange"),
-            lista_visual, resultado_total, pago_recibido, resultado_cambio,
+            cantidad, 
+            ft.ElevatedButton("AGREGAR AL CARRITO", on_click=agregar_click, bgcolor="orange"),
+            lista_visual, 
+            resultado_total, 
+            pago_recibido, 
+            resultado_cambio,
             ft.ElevatedButton("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor="green"),
             ft.ElevatedButton("REALIZAR CORTE", on_click=realizar_corte_click, bgcolor="blue"),
-            ft.Divider(), ventas_realizadas_visual, lista_record, total_general_visual
+            ft.Divider(), 
+            ventas_realizadas_visual, 
+            lista_record, 
+            total_general_visual
         )
+        page.update()
 
     def iniciar_sistema():
         cargar_datos()
