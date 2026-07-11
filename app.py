@@ -9,7 +9,6 @@ ARCHIVO_SESION = "sesion_activa.json"
 def main(page: ft.Page):
     page.title = "Sistema PATTY - Control Total"
     page.theme_mode = "light"
-    # Fondo dorado más claro y luminoso
     page.bgcolor = "#F1C40F" 
     page.padding = 0
 
@@ -70,14 +69,9 @@ def main(page: ft.Page):
         e.control.bgcolor = "green"
         pan_activo["nombre"] = e.control.content.value
         seccion_der.controls.clear()
-        # Botones numéricos con ancho ajustado para el 10
+        # Se mantiene la fila descendente, corregido el ancho para que el 10 no se corte
         for i in range(1, 11):
-            btn = ft.ElevatedButton(
-                content=ft.Text(str(i), size=14, weight="bold"), 
-                on_click=lambda e, n=i: procesar_seleccion(n), 
-                width=60, 
-                height=35
-            )
+            btn = ft.ElevatedButton(str(i), on_click=lambda e, n=i: procesar_seleccion(n), width=60, height=35)
             seccion_der.controls.append(btn)
         page.update()
 
@@ -96,6 +90,29 @@ def main(page: ft.Page):
             seccion_der.controls.clear()
             for b in botones_lista: b.bgcolor = "white"
             page.update()
+
+    # --- Teclado para Efectivo ---
+    def mostrar_teclado(e):
+        contenedor_teclado.visible = True
+        page.update()
+
+    def tecla_presionada(e):
+        valor = e.control.content.value
+        if valor == "C": pago_recibido.value = ""
+        elif valor == "OK": contenedor_teclado.visible = False
+        else: pago_recibido.value += str(valor)
+        calcular_cambio(None)
+        page.update()
+
+    def crear_btn_t(val):
+        return ft.ElevatedButton(content=ft.Text(val), on_click=tecla_presionada, width=50)
+
+    contenedor_teclado = ft.Container(content=ft.Column([
+        ft.Row([crear_btn_t("1"), crear_btn_t("2"), crear_btn_t("3")]),
+        ft.Row([crear_btn_t("4"), crear_btn_t("5"), crear_btn_t("6")]),
+        ft.Row([crear_btn_t("7"), crear_btn_t("8"), crear_btn_t("9")]),
+        ft.Row([crear_btn_t("0"), crear_btn_t("C"), crear_btn_t("OK")])
+    ]), visible=False, padding=10, bgcolor="white")
 
     def calcular_cambio(e):
         total = sum(i['subtotal'] for i in carrito)
@@ -119,6 +136,7 @@ def main(page: ft.Page):
             inputs_inventario[item['pan']].value = str(inventario[item['pan']])
         carrito.clear(); lista_visual.controls.clear(); resultado_total.value = "Total: $0.00"
         pago_recibido.value = ""; resultado_cambio.value = "Cambio: $0.00"
+        contenedor_teclado.visible = False
         actualizar_lista_record(); guardar_datos(); page.update()
 
     def realizar_corte_click(e):
@@ -131,11 +149,12 @@ def main(page: ft.Page):
     lista_record = ft.ListView(height=120)
     resultado_total = ft.Text("Total: $0.00", size=20, weight="bold", color="black")
     resultado_cambio = ft.Text("Cambio: $0.00", size=20, weight="bold", color="black")
-    pago_recibido = ft.TextField(label="Efectivo Recibido ($)", on_change=calcular_cambio, width=200)
+    pago_recibido = ft.TextField(label="Efectivo Recibido ($)", on_focus=mostrar_teclado, read_only=True, width=200)
     total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=20, weight="bold", color="black")
     
     def crear_bloque(nombre):
-        campo_inv = ft.TextField(hint_text="Inv.", width=60, height=40, text_size=12, keyboard_type="number", on_change=actualizar_inventario_desde_inputs)
+        # Ajuste en content_padding para que el '100' quepa bien
+        campo_inv = ft.TextField(hint_text="Inv.", width=60, height=40, text_size=12, content_padding=5, keyboard_type="number", on_change=actualizar_inventario_desde_inputs)
         campo_inv.value = str(inventario.get(nombre, 0))
         inputs_inventario[nombre] = campo_inv
         btn = ft.ElevatedButton(content=ft.Text(nombre, size=12, weight="bold", color="black"), on_click=seleccionar_boton, bgcolor="white", width=130, height=50)
@@ -146,7 +165,7 @@ def main(page: ft.Page):
         cargar_datos()
         prods = list(precios.keys())
         seccion_izq.controls.extend([crear_bloque(p) for p in prods])
-        seccion_izq.controls.extend([lista_visual, resultado_total, pago_recibido, resultado_cambio, 
+        seccion_izq.controls.extend([lista_visual, resultado_total, pago_recibido, contenedor_teclado, resultado_cambio, 
                                      ft.ElevatedButton("CONFIRMAR", on_click=confirmar_venta_click, bgcolor="green"),
                                      ft.ElevatedButton("CORTE", on_click=realizar_corte_click, bgcolor="blue"),
                                      lista_record, total_general_visual])
@@ -156,7 +175,10 @@ def main(page: ft.Page):
 
     if os.path.exists(ARCHIVO_SESION): iniciar_sistema()
     else:
-        campo_clave = ft.TextField(label="Clave", password=True)
+        # Centrado del login
+        page.vertical_alignment = "center"
+        page.horizontal_alignment = "center"
+        campo_clave = ft.TextField(label="Clave", password=True, width=200)
         page.add(ft.Column([campo_clave, ft.ElevatedButton("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
 
 ft.app(target=main)
