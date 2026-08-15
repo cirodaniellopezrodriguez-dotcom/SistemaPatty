@@ -24,7 +24,7 @@ lista_visual = ft.Column()
 lista_record = ft.Column()
 resultado_total = ft.Text("Total: $0.00", size=18, weight="bold", color="black")
 resultado_cambio = ft.Text("Cambio: $0.00", size=18, weight="bold", color="black")
-pago_recibido = ft.TextField(label="Efectivo Recibido ($)", width=180, read_only=True)
+pago_recibido = ft.TextField(label="Efectivo Recibido ($)", width=180)
 total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=16, weight="bold", color="black")
 
 def main(page: ft.Page):
@@ -176,7 +176,17 @@ def main(page: ft.Page):
             ventas_totales_dinero[item['pan']] += item['subtotal']
             suma_total_dinero += item['subtotal']
             inputs_inventario[item['pan']].value = str(inventario[item['pan']])
-        carrito.clear(); lista_visual.controls.clear(); resultado_total.value = "Total: $0.00"; pago_recibido.value = ""; actualizar_lista_record(); guardar_datos(); verificar_alertas(); page.update()
+        carrito.clear()
+        lista_visual.controls.clear()
+        resultado_total.value = "Total: $0.00"
+        pago_recibido.value = ""
+        resultado_cambio.value = "Cambio: $0.00"
+        resultado_cambio.color = "black"
+        contenedor_teclado.visible = False  # Oculta el teclado al terminar la venta
+        actualizar_lista_record()
+        guardar_datos()
+        verificar_alertas()
+        page.update()
 
     def calcular_cambio(e=None):
         total = sum(i['subtotal'] for i in carrito)
@@ -248,7 +258,6 @@ def main(page: ft.Page):
                 )
                 elementos.append(card)
 
-            # Lista desplegada hacia abajo que fluye de forma natural en la página
             lista_elementos_historial = ft.Column(elementos, horizontal_alignment=ft.CrossAxisAlignment.CENTER) if elementos else ft.Text("No hay cortes guardados aún.", size=14)
             
             page.add(ft.Container(content=ft.Column([
