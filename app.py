@@ -24,7 +24,7 @@ lista_visual = ft.Column()
 lista_record = ft.Column()
 resultado_total = ft.Text("Total: $0.00", size=18, weight="bold", color="black")
 resultado_cambio = ft.Text("Cambio: $0.00", size=18, weight="bold", color="black")
-pago_recibido = ft.TextField(label="Efectivo Recibido ($)", width=180)
+pago_recibido = ft.TextField(label="Efectivo Recibido ($)", width=180, read_only=True)
 total_general_visual = ft.Text(value="TOTAL VENDIDO HOY: $0.00", size=16, weight="bold", color="black")
 
 def main(page: ft.Page):
@@ -78,9 +78,12 @@ def main(page: ft.Page):
 
     def teclado_presionada(e):
         valor = e.control.content.value
-        if valor == "C": pago_recibido.value = ""
-        elif valor == "OK": contenedor_teclado.visible = False
-        else: pago_recibido.value += str(valor)
+        if valor == "C": 
+            pago_recibido.value = ""
+        elif valor == "OK": 
+            contenedor_teclado.visible = False
+        else: 
+            pago_recibido.value += str(valor)
         calcular_cambio()
         page.update()
 
@@ -95,6 +98,8 @@ def main(page: ft.Page):
         ft.Row([crear_boton_t("0"), crear_boton_t("C"), crear_boton_t("OK")], alignment="center")
     ], alignment="center"), visible=False, padding=5, bgcolor="white")
 
+    # Vinculamos tanto el click como el foco para asegurar que la calculadora aparezca siempre
+    pago_recibido.on_click = mostrar_teclado
     pago_recibido.on_focus = mostrar_teclado
 
     def guardar_datos():
@@ -176,13 +181,15 @@ def main(page: ft.Page):
             ventas_totales_dinero[item['pan']] += item['subtotal']
             suma_total_dinero += item['subtotal']
             inputs_inventario[item['pan']].value = str(inventario[item['pan']])
+        
         carrito.clear()
         lista_visual.controls.clear()
         resultado_total.value = "Total: $0.00"
         pago_recibido.value = ""
         resultado_cambio.value = "Cambio: $0.00"
         resultado_cambio.color = "black"
-        contenedor_teclado.visible = False  # Oculta el teclado al terminar la venta
+        contenedor_teclado.visible = False  # Oculta el teclado temporalmente al confirmar
+        
         actualizar_lista_record()
         guardar_datos()
         verificar_alertas()
@@ -195,7 +202,9 @@ def main(page: ft.Page):
             diff = pago - total
             resultado_cambio.value = f"Cambio: ${diff:.2f}" if diff >= 0 else f"Faltan: ${abs(diff):.2f}"
             resultado_cambio.color = "green" if diff >= 0 else "red"
-        except: resultado_cambio.value = "Cambio: $0.00"; resultado_cambio.color = "black"
+        except: 
+            resultado_cambio.value = "Cambio: $0.00"
+            resultado_cambio.color = "black"
         page.update()
 
     def crear_bloque(nombre):
