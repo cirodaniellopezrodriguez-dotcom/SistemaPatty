@@ -14,15 +14,16 @@ COLOR_GRIS = "#BDBDBD"
 ARCHIVO_DATOS = "datos_patty.json"
 ARCHIVO_SESION = "sesion_activa.json"
 
-inventario = {'Concha': 0, 'Frances lagunero': 10, 'Concha nuez': 0, 'Galleta chispas choc': 0}
-precios = {'Concha': 14.0, 'Frances lagunero': 10.0, 'Concha nuez': 17.0, 'Galleta chispas choc': 10.0}
-productos_activos = {'Concha': True, 'Frances lagunero': True, 'Concha nuez': True, 'Galleta chispas choc': True}
+inventario = {'Concha': 0, 'Frances lagunero': 10, 'Concha nuez': 0, 'Galleta chispas choc': 0, 'Pan de muerto': 0}
+precios = {'Concha': 14.0, 'Frances lagunero': 10.0, 'Concha nuez': 17.0, 'Galleta chispas choc': 10.0, 'Pan de muerto': 18.0}
+productos_activos = {'Concha': True, 'Frances lagunero': True, 'Concha nuez': True, 'Galleta chispas choc': True, 'Pan de muerto': True}
 
 ventas_totales_cantidad = {producto: 0 for producto in precios}
 ventas_totales_dinero = {producto: 0.0 for producto in precios}
 suma_total_dinero = 0.0
 historial_cortes = []
 carrito = []
+ultima_venta_realizada = None
 pan_activo = {"nombre": None}
 inputs_inventario = {}
 botones_lista = []
@@ -44,11 +45,12 @@ def main(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
 
     def ejecutar_corte(e):
-        global suma_total_dinero
+        global suma_total_dinero, ultima_venta_realizada
         if suma_total_dinero > 0:
             fecha_actual = datetime.now().strftime("%d/%m/%Y")
             historial_cortes.append({"fecha": fecha_actual, "total": suma_total_dinero})
         suma_total_dinero = 0.0
+        ultima_venta_realizada = None
         for pan in precios:
             ventas_totales_cantidad[pan] = 0
             ventas_totales_dinero[pan] = 0.0
@@ -208,8 +210,13 @@ def main(page: ft.Page):
         page.update()
 
     def confirmar_venta_click(e):
-        global suma_total_dinero
+        global suma_total_dinero, ultima_venta_realizada
         if not carrito: return
+        
+        # Guardamos copia exacta de lo que se vendió para poder cancelarlo limpiamente después
+        ultima_venta_realizada = list(carrito)
+
+        # Aplicamos la venta una sola vez al inventario y a los acumuladores
         for item in carrito:
             inventario[item['pan']] -= item['cant']
             ventas_totales_cantidad[item['pan']] += item['cant']
@@ -227,6 +234,33 @@ def main(page: ft.Page):
         guardar_datos()
         actualizar_lista_record()
         verificar_alertas()
+        page.update()
+
+    def cancelar_ultima_venta(e):
+        global suma_total_dinero, ultima_venta_realizada
+        if not ultima_venta_realizada:
+            page.dialog = ft.AlertDialog(title=ft.Text("No hay ninguna venta reciente para cancelar."))
+            page.dialog.open = True
+            page.update()
+            return
+
+        # Devolvemos exactamente las piezas al inventario y restamos del dinero acumulado
+        for item in ultima_venta_realizada:
+            inventario[item['pan']] += item['cant'] 
+            ventas_totales_cantidad[item['pan']] -= item['cant']
+            ventas_totales_dinero[item['pan']] -= item['subtotal']
+            suma_total_dinero -= item['subtotal']
+            if item['pan'] in inputs_inventario:
+                inputs_inventario[item['pan']].value = str(inventario[item['pan']])
+
+        ultima_venta_realizada = None
+
+        guardar_datos()
+        actualizar_lista_record()
+        verificar_alertas()
+        
+        page.dialog = ft.AlertDialog(title=ft.Text("¡Última venta cancelada con éxito! Las piezas regresaron al inventario."))
+        page.dialog.open = True
         page.update()
 
     def calcular_cambio(e=None):
@@ -287,7 +321,6 @@ def main(page: ft.Page):
         if destino == "sistema":
             iniciar_sistema(False)
         elif destino == "opciones":
-            # Mantenemos el orden exacto en el que fueron creados los productos (añadidos abajo)
             checkboxes_col = [ft.Text("Selecciona los productos disponibles hoy:", size=15, weight="bold")]
             for pan in precios.keys():
                 chk = ft.Checkbox(
@@ -376,13 +409,13 @@ def main(page: ft.Page):
         inputs_inventario.clear()
         seccion_izq.controls.clear()
 
-        # Respetamos el orden natural de inserción para que los nuevos queden abajo
         elementos_activos = [crear_bloque(p) for p in precios.keys() if productos_activos.get(p, True)]
 
         seccion_izq.controls.extend(
             elementos_activos +
             [lista_visual, resultado_total, pago_recibido, contenedor_teclado, resultado_cambio,
-             ft.ElevatedButton("CONFIRMAR", on_click=confirmar_venta_click, bgcolor=COLOR_VERDE, color="white"),
+             ft.ElevatedButton("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor=COLOR_VERDE, color="white"),
+             ft.ElevatedButton("CANCELAR ÚLTIMA VENTA", on_click=cancelar_ultima_venta, bgcolor="#FF5252", color="white"),
              ft.ElevatedButton("CORTE", on_click=realizar_corte_click, bgcolor=COLOR_LAVANDA, color="white"),
              lista_record, total_general_visual,
              ft.ElevatedButton("ADMINISTRACIÓN", on_click=lambda e: cambiar_pantalla("opciones"), bgcolor=COLOR_GRIS, color="white")]
