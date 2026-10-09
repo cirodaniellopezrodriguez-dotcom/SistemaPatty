@@ -437,4 +437,5 @@ def main(page: ft.Page):
         campo_clave = ft.TextField(label="Clave", password=True, width=200)
         page.add(ft.Column([campo_clave, ft.ElevatedButton("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
 
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(target=main)
