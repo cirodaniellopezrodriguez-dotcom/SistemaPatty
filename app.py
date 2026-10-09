@@ -87,7 +87,7 @@ def main(page: ft.Page):
 
     def crear_boton_t(val):
         color_f = COLOR_ROSA_MEXICANO if val=="C" else (COLOR_VERDE if val=="OK" else "white")
-        return ft.ElevatedButton(
+        return ft.Button(
             content=ft.Text(val, color="white" if color_f != "white" else "black"),
             on_click=teclado_presionada,
             width=50,
@@ -171,7 +171,7 @@ def main(page: ft.Page):
             producto = {'pan': pan, 'cant': n, 'subtotal': precios[pan] * n}
             carrito.append(producto)
             fila_item = ft.Row([
-                ft.ElevatedButton("X", on_click=lambda e: eliminar_item(producto, fila_item), bgcolor="#FF5252", color="white", height=30),
+                ft.Button("X", on_click=lambda e: eliminar_item(producto, fila_item), bgcolor="#FF5252", color="white", height=30),
                 ft.Text(f"{pan} x{n} = ${precios[pan]*n:.2f}", size=12, color="black")
             ], alignment="spaceBetween")
             lista_visual.controls.append(fila_item)
@@ -193,7 +193,7 @@ def main(page: ft.Page):
 
         for i in range(1, 11):
             seccion_der.controls.append(
-                ft.ElevatedButton(
+                ft.Button(
                     str(i),
                     on_click=lambda e, n=i: procesar_seleccion(n),
                     width=55, height=33,
@@ -283,7 +283,7 @@ def main(page: ft.Page):
         )
         inputs_inventario[nombre] = campo_inv
 
-        btn = ft.ElevatedButton(
+        btn = ft.Button(
             content=ft.Text(nombre, size=11, weight="bold", color="white", text_align="center"),
             on_click=seleccionar_boton,
             bgcolor=COLOR_LAVANDA,
@@ -337,9 +337,9 @@ def main(page: ft.Page):
                 ft.Divider(),
                 *checkboxes_col,
                 ft.Container(height=20),
-                ft.ElevatedButton("VER HISTORIAL DE CORTES", on_click=lambda e: cambiar_pantalla("historial"), bgcolor=COLOR_ROSA_MEXICANO, color="white"),
+                ft.Button("VER HISTORIAL DE CORTES", on_click=lambda e: cambiar_pantalla("historial"), bgcolor=COLOR_ROSA_MEXICANO, color="white"),
                 ft.Container(height=5),
-                ft.ElevatedButton("VOLVER AL SISTEMA", on_click=lambda e: cambiar_pantalla("sistema"), bgcolor=COLOR_LAVANDA, color="white")
+                ft.Button("VOLVER AL SISTEMA", on_click=lambda e: cambiar_pantalla("sistema"), bgcolor=COLOR_LAVANDA, color="white")
             ], alignment="center", horizontal_alignment="center", scroll=ft.ScrollMode.AUTO), padding=20))
 
         elif destino == "historial":
@@ -356,7 +356,7 @@ def main(page: ft.Page):
                                     ft.Icon(ft.Icons.CALENDAR_MONTH, size=16),
                                     ft.Text(f"Fecha: {corte['fecha']}", size=13, weight="bold")
                                 ], spacing=5),
-                                ft.ElevatedButton("X", on_click=lambda e, ci=corte: eliminar_corte_historial(ci), bgcolor="#FF5252", color="white", width=40, height=30)
+                                ft.Button("X", on_click=lambda e, ci=corte: eliminar_corte_historial(ci), bgcolor="#FF5252", color="white", width=40, height=30)
                             ], alignment="spaceBetween"),
                             ft.Text(f"Total Corte: ${corte['total']:.2f}", size=14, weight="bold"),
                             ft.Row([
@@ -387,9 +387,9 @@ def main(page: ft.Page):
             page.add(ft.Container(content=ft.Column([
                 *historial_items,
                 ft.Container(height=15),
-                ft.ElevatedButton("BORRAR TODO EL HISTORIAL", on_click=borrar_todo_historial, bgcolor="#FF5252", color="white"),
+                ft.Button("BORRAR TODO EL HISTORIAL", on_click=borrar_todo_historial, bgcolor="#FF5252", color="white"),
                 ft.Container(height=5),
-                ft.ElevatedButton("VOLVER A OPCIONES", on_click=lambda e: cambiar_pantalla("opciones"), bgcolor=COLOR_LAVANDA, color="white")
+                ft.Button("VOLVER A OPCIONES", on_click=lambda e: cambiar_pantalla("opciones"), bgcolor=COLOR_LAVANDA, color="white")
             ], alignment="center", horizontal_alignment="center", scroll=ft.ScrollMode.AUTO), padding=20))
 
         page.update()
@@ -411,11 +411,11 @@ def main(page: ft.Page):
         seccion_izq.controls.extend(
             elementos_activos +
             [lista_visual, resultado_total, pago_recibido, contenedor_teclado, resultado_cambio,
-             ft.ElevatedButton("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor=COLOR_VERDE, color="white"),
-             ft.ElevatedButton("CANCELAR ÚLTIMA VENTA", on_click=cancelar_ultima_venta, bgcolor="#FF5252", color="white"),
-             ft.ElevatedButton("CORTE", on_click=realizar_corte_click, bgcolor=COLOR_LAVANDA, color="white"),
+             ft.Button("CONFIRMAR VENTA", on_click=confirmar_venta_click, bgcolor=COLOR_VERDE, color="white"),
+             ft.Button("CANCELAR ÚLTIMA VENTA", on_click=cancelar_ultima_venta, bgcolor="#FF5252", color="white"),
+             ft.Button("CORTE", on_click=realizar_corte_click, bgcolor=COLOR_LAVANDA, color="white"),
              lista_record, total_general_visual,
-             ft.ElevatedButton("ADMINISTRACIÓN", on_click=lambda e: cambiar_pantalla("opciones"), bgcolor=COLOR_GRIS, color="white")]
+             ft.Button("ADMINISTRACIÓN", on_click=lambda e: cambiar_pantalla("opciones"), bgcolor=COLOR_GRIS, color="white")]
         )
 
         page.controls.clear()
@@ -432,7 +432,8 @@ def main(page: ft.Page):
         iniciar_sistema(False)
     else:
         campo_clave = ft.TextField(label="Clave", password=True, width=200)
-        page.add(ft.Column([campo_clave, ft.ElevatedButton("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
+        page.add(ft.Column([campo_clave, ft.Button("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
 
-# Línea necesaria para arrancar la aplicación en la computadora
-ft.app(target=main)
+# Arranque seguro compatible con PC y Celular
+if __name__ == "__main__":
+    ft.run(main)
