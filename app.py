@@ -213,10 +213,8 @@ def main(page: ft.Page):
         global suma_total_dinero, ultima_venta_realizada
         if not carrito: return
         
-        # Guardamos copia exacta de lo que se vendió para poder cancelarlo limpiamente después
         ultima_venta_realizada = list(carrito)
 
-        # Aplicamos la venta una sola vez al inventario y a los acumuladores
         for item in carrito:
             inventario[item['pan']] -= item['cant']
             ventas_totales_cantidad[item['pan']] += item['cant']
@@ -244,7 +242,6 @@ def main(page: ft.Page):
             page.update()
             return
 
-        # Devolvemos exactamente las piezas al inventario y restamos del dinero acumulado
         for item in ultima_venta_realizada:
             inventario[item['pan']] += item['cant'] 
             ventas_totales_cantidad[item['pan']] -= item['cant']
@@ -437,5 +434,5 @@ def main(page: ft.Page):
         campo_clave = ft.TextField(label="Clave", password=True, width=200)
         page.add(ft.Column([campo_clave, ft.ElevatedButton("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
 
-if __name__ == "__main__":
-    ft.app(target=main)
+# Línea necesaria para arrancar la aplicación en la computadora
+ft.app(target=main)
