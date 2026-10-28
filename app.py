@@ -463,7 +463,7 @@ def main(page: ft.Page):
                     ft.Button("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)
                 ], alignment="center", horizontal_alignment="center"),
                 expand=True,
-                alignment=ft.alignment.center
+                alignment="center"
             )
         )
 
