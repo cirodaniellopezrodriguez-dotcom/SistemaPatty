@@ -456,7 +456,16 @@ def main(page: ft.Page):
         iniciar_sistema(False)
     else:
         campo_clave = ft.TextField(label="Clave", password=True, width=200)
-        page.add(ft.Column([campo_clave, ft.Button("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)], alignment="center"))
+        page.add(
+            ft.Container(
+                content=ft.Column([
+                    campo_clave, 
+                    ft.Button("ENTRAR", on_click=lambda e: iniciar_sistema() if campo_clave.value == "PATTY2026" else None)
+                ], alignment="center", horizontal_alignment="center"),
+                expand=True,
+                alignment=ft.alignment.center
+            )
+        )
 
 # Arranque seguro compatible con PC y Celular
 if __name__ == "__main__":
