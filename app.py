@@ -14,9 +14,33 @@ COLOR_GRIS = "#BDBDBD"
 ARCHIVO_DATOS = "datos_patty.json"
 ARCHIVO_SESION = "sesion_activa.json"
 
-inventario = {'Concha': 0, 'Frances lagunero': 10, 'Concha nuez': 0, 'Galleta chispas choc': 0, 'Pan de muerto': 0}
-precios = {'Concha': 14.0, 'Frances lagunero': 10.0, 'Concha nuez': 17.0, 'Galleta chispas choc': 10.0, 'Pan de muerto': 18.0}
-productos_activos = {'Concha': True, 'Frances lagunero': True, 'Concha nuez': True, 'Galleta chispas choc': True, 'Pan de muerto': True}
+inventario = {
+    'Concha': 0, 
+    'Frances lagunero': 10, 
+    'Concha nuez': 0, 
+    'Galleta chispas choc': 0, 
+    'Pan de muerto': 0,
+    'Galleta normal': 0,
+    'Galleta con mermelada': 0
+}
+precios = {
+    'Concha': 14.0, 
+    'Frances lagunero': 10.0, 
+    'Concha nuez': 17.0, 
+    'Galleta chispas choc': 10.0, 
+    'Pan de muerto': 18.0,
+    'Galleta normal': 12.0,
+    'Galleta con mermelada': 13.0
+}
+productos_activos = {
+    'Concha': True, 
+    'Frances lagunero': True, 
+    'Concha nuez': True, 
+    'Galleta chispas choc': True, 
+    'Pan de muerto': True,
+    'Galleta normal': True,
+    'Galleta con mermelada': True
+}
 
 ventas_totales_cantidad = {producto: 0 for producto in precios}
 ventas_totales_dinero = {producto: 0.0 for producto in precios}
