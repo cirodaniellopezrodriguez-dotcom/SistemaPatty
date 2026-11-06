@@ -30,7 +30,7 @@ precios = {
     'Pan de muerto': 18.0,
     'Galleta normal': 12.0,
     'Galleta con mermelada': 13.0,
-    'Concha rellena': 40.0
+    'Concha rellena': 30.0
 }
 productos_activos = {
     'Concha': True, 
