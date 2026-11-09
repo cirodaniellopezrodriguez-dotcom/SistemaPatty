@@ -21,7 +21,8 @@ inventario = {
     'Pan de muerto': 0,
     'Galleta normal': 0,
     'Galleta con mermelada': 0,
-    'Concha rellena': 0
+    'Concha rellena': 0,
+    'Concha Oreo': 0
 }
 precios = {
     'Concha': 14.0, 
@@ -30,7 +31,8 @@ precios = {
     'Pan de muerto': 18.0,
     'Galleta normal': 12.0,
     'Galleta con mermelada': 13.0,
-    'Concha rellena': 30.0
+    'Concha rellena': 30.0,
+    'Concha Oreo': 18.0
 }
 productos_activos = {
     'Concha': True, 
@@ -39,7 +41,8 @@ productos_activos = {
     'Pan de muerto': True,
     'Galleta normal': True,
     'Galleta con mermelada': True,
-    'Concha rellena': True
+    'Concha rellena': True,
+    'Concha Oreo': True
 }
 
 ventas_totales_cantidad = {producto: 0 for producto in precios}
